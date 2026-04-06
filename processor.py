@@ -1,137 +1,131 @@
-import subprocess
-import random
-import logging
 import os
-from moviepy.editor import VideoFileClip, AudioFileClip
+import json
+import random
+import asyncio
+import subprocess
+import logging
+import boto3
+import edge_tts
+from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+from botocore.client import Config
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Logging Setup
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def get_video_duration(url):
-    """Fetch the duration of a YouTube video without downloading it."""
-    cmd = [
-        'yt-dlp', 
-        '--get-duration', 
-        url
-    ]
-    try:
-        duration_str = subprocess.check_output(cmd).decode().strip()
-        # Convert H:M:S to total seconds
-        parts = list(map(int, duration_str.split(':')))
-        if len(parts) == 3: return parts[0]*3600 + parts[1]*60 + parts[2]
-        if len(parts) == 2: return parts[0]*60 + parts[1]
-        return parts[0]
-    except Exception:
-        return 600 # Default to 10 mins if it fails
+# R2 Configuration
+R2_ENDPOINT = os.getenv("bucket_endpoint")
+R2_ACCESS_KEY = os.getenv("access_key_id")
+R2_SECRET_KEY = os.getenv("secret_access_key")
+BUCKET_NAME = os.getenv("bucket_name")
 
-def download_random_slice(youtube_url, post_id, slice_duration=60):
-    """Streams a random slice from a long YT video directly to a temp file."""
+s3 = boto3.client(
+    's3',
+    endpoint_url=R2_ENDPOINT,
+    aws_access_key_id=R2_ACCESS_KEY,
+    aws_secret_access_key=R2_SECRET_KEY,
+    config=Config(signature_version='s3v4'),
+    region_name='auto'
+)
+
+async def generate_audio(text, post_id):
+    """Converts Reddit text to speech."""
     os.makedirs("temp", exist_ok=True)
+    output_path = f"temp/{post_id}.mp3"
+    communicate = edge_tts.Communicate(text, "en-US-ChristopherNeural")
+    await communicate.save(output_path)
+    logger.info(f"Audio saved: {output_path}")
+    return output_path
+
+def get_random_video_url(json_path="game_play_source.json"):
+    """Picks a random video ID from the playlists in your JSON."""
+    with open(json_path, 'r') as f:
+        sources = json.load(f)
+    game = random.choice(list(sources.keys()))
+    playlist_url = sources[game]
+    
+    cmd = ['yt-dlp', '--get-id', '--flat-playlist', playlist_url]
+    video_ids = subprocess.check_output(cmd).decode().splitlines()
+    selected_id = random.choice(video_ids)
+    return f"https://www.youtube.com/watch?v={selected_id}"
+
+def download_video_slice(youtube_url, post_id, duration=60):
+    """Slices a random 60s chunk from YouTube without downloading the full file."""
     output_path = f"temp/{post_id}_bg.mp4"
     
-    total_duration = get_video_duration(youtube_url)
-    
-    # Pick a random start time, leaving room for the slice
-    # We avoid the first 30s (intros) and the last 30s (outros)
-    start_time = random.randint(30, max(31, int(total_duration) - slice_duration - 30))
-    
-    logger.info(f"Slicing {slice_duration}s starting at {start_time}s from {youtube_url}")
+    # Get direct stream URL
+    cmd_url = ['yt-dlp', '-g', '-f', 'bestvideo[height<=1080][ext=mp4]', youtube_url]
+    direct_url = subprocess.check_output(cmd_url).decode().strip()
 
-    # The 'magic' command: downloads ONLY the bytes needed for the slice
-    cmd = [
-        'yt-dlp',
-        '-g', youtube_url, # Get the direct URL
-        '-f', 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+    # Random start time (assuming 10min video, start between 1-8 mins)
+    start_time = random.randint(60, 480)
+    
+    ffmpeg_cmd = [
+        'ffmpeg', '-ss', str(start_time), '-t', str(duration),
+        '-i', direct_url, '-c:v', 'libx264', '-c:a', 'aac', '-y', output_path
     ]
-    
-    try:
-        direct_url = subprocess.check_output(cmd).decode().strip()
-        
-        # Use ffmpeg to cut the stream
-        ffmpeg_cmd = [
-            'ffmpeg',
-            '-ss', str(start_time),
-            '-t', str(slice_duration),
-            '-i', direct_url,
-            '-c:v', 'libx264',
-            '-c:a', 'aac',
-            '-strict', 'experimental',
-            '-y', output_path
-        ]
-        
-        subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
-        return output_path
-    except Exception as e:
-        logger.error(f"Slicing failed: {e}")
-        return None
+    subprocess.run(ffmpeg_cmd, capture_output=True)
+    logger.info(f"Video slice saved: {output_path}")
+    return output_path
 
-def generate_tts(text, post_id):
-    """Generates TTS audio from text using edge-tts."""
-    os.makedirs("temp", exist_ok=True)
-    output_path = f"temp/{post_id}_tts.mp3"
+def assemble_video(bg_path, audio_path, title, post_id):
+    """Crops to 9:16 and overlays title."""
+    output_path = f"temp/{post_id}_final.mp4"
     
-    # Command to run edge-tts CLI
-    cmd = [
-        'edge-tts',
-        '--text', text,
-        '--write-media', output_path
-    ]
+    video = VideoFileClip(bg_path)
+    audio = AudioFileClip(audio_path)
     
-    try:
-        subprocess.run(cmd, check=True, capture_output=True)
-        return output_path
-    except Exception as e:
-        logger.error(f"TTS generation failed: {e}")
-        return None
+    # Sync duration to audio (max 59s for Shorts)
+    final_dur = min(audio.duration, 59.0)
+    video = video.subclip(0, final_dur).set_audio(audio)
+    
+    # Vertical Crop
+    w, h = video.size
+    target_w = h * (9/16)
+    video = video.crop(x_center=w/2, y_center=h/2, width=target_w, height=h)
+    
+    # Title Overlay
+    txt = TextClip(title, fontsize=50, color='white', font='Arial-Bold',
+                   method='caption', size=(target_w*0.8, None), bg_color='black')
+    txt = txt.set_duration(final_dur).set_position('center').set_opacity(0.8)
+    
+    final = CompositeVideoClip([video, txt])
+    final.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=24, threads=4)
+    return output_path
 
-def assemble_video(bg_video_path, tts_audio_path, output_path):
-    """Combines the background video and TTS audio using MoviePy."""
-    try:
-        video_clip = VideoFileClip(bg_video_path)
-        audio_clip = AudioFileClip(tts_audio_path)
-        
-        # Trim the background video to exactly match the audio duration
-        video_clip = video_clip.subclip(0, audio_clip.duration)
-        
-        # Set the generated TTS as the video's audio track
-        final_clip = video_clip.set_audio(audio_clip)
-        
-        # Write the final video (logger=None removes verbose moviepy output)
-        final_clip.write_videofile(output_path, codec='libx264', audio_codec='aac', fps=30, logger=None)
-        
-        # Free resources
-        video_clip.close()
-        audio_clip.close()
-        final_clip.close()
-        return output_path
-    except Exception as e:
-        logger.error(f"Video assembly failed: {e}")
-        return None
+def archive_to_r2(file_path, post_id):
+    """Uploads finished video to your 'shitposting-bot' bucket."""
+    r2_key = f"archives/{post_id}.mp4"
+    s3.upload_file(file_path, BUCKET_NAME, r2_key)
+    logger.info(f"Archived to R2: {r2_key}")
 
-def process_reddit_short(post_data, bg_youtube_url):
-    """Full pipeline: TTS -> Dynamic Background Slicing -> Assembly."""
-    post_id = post_data["id"]
-    text = f"{post_data['title']}. {post_data['content']}"
-    
-    # 1. Generate TTS
-    logger.info(f"Generating TTS for {post_id}...")
-    tts_path = generate_tts(text, post_id)
-    if not tts_path:
-        return None
+def cleanup(files):
+    """Deletes temporary assets."""
+    for f in files:
+        if f and os.path.exists(f):
+            os.remove(f)
+            logger.info(f"Cleaned up: {f}")
+
+
+if __name__ == "__main__":
+    # Mock data for testing
+    test_id = "test_123"
+    test_text = "This is a test story for my Reddit pipeline. It should be long enough to hear the voice."
+    test_title = "Testing the Processor Module"
+
+    async def test():
+        audio = await generate_audio(test_text, test_id)
+        yt_url = get_random_video_url()
+        video_bg = download_video_slice(yt_url, test_id)
         
-    # 2. Get dynamic slice_duration based on TTS length
-    audio_clip = AudioFileClip(tts_path)
-    dynamic_slice_duration = int(audio_clip.duration) + 2  # Give a 2-second buffer
-    audio_clip.close()
-    
-    # 3. Download Background using the dynamically calculated length
-    logger.info(f"Downloading {dynamic_slice_duration}s background slice...")
-    bg_path = download_random_slice(bg_youtube_url, post_id, slice_duration=dynamic_slice_duration)
-    if not bg_path:
-        return None
+        final = assemble_video(video_bg, audio, test_title, test_id)
+        archive_to_r2(final, test_id)
         
-    # 4. Assemble Final Video
-    os.makedirs("output", exist_ok=True)
-    final_video_path = f"output/{post_id}_final.mp4"
-    logger.info(f"Assembling final video to {final_video_path}...")
-    
-    return assemble_video(bg_path, tts_path, final_video_path)
+        # Uncomment to clean up after test
+        # cleanup([audio, video_bg, final])
+        print(f"🚀 SUCCESS: Check {final}")
+
+    asyncio.run(test())

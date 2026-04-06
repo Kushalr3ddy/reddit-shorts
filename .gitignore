@@ -9,6 +9,7 @@ __pycache__/
 # Personal Files
 tbl_create.py
 test.txt
+temp/
 
 # Distribution / packaging
 .Python
