@@ -26,7 +26,7 @@ def archive_video(local_path, post_id):
         s3 = get_r2_client()
         logger.info(f"Uploading {post_id} to R2...")
         s3.upload_file(local_path, bucket, r2_key)
-        logger.info(f"✅ Archived to R2: {r2_key}")
+        logger.info(f"Archived to R2: {r2_key}")
         return True
     except Exception as e:
         logger.error(f"R2 Archive failed: {e}")
