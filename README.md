@@ -1,13 +1,35 @@
-[x] Reddit Scraper (PRAW)
+# Reddit-to-YouTube Shorts Automated ETL Pipeline
 
-[x] Postgres Connection (psycopg2)
+An automated data pipeline that extracts trending stories from Reddit, generates AI voiceovers, slices relevant gameplay footage from YouTube, and assembles high-retention vertical "Shorts" videos.
 
-[x] Deduplication Logic (Claim/Update status)
+## 🏗️ System Architecture
 
-[x] Text-to-Speech (edge-tts) — Just added
+The project follows a modular ETL (Extract, Transform, Load) pattern:
 
-[ ] Background Footage (R2/S3 + yt-dlp)
+1.  **Extract**: Scrapes top posts from targeted subreddits using **PRAW** (Reddit API).
+2.  **Verify**: Uses **Supabase (PostgreSQL)** to deduplicate posts and track processing status.
+3.  **Transform**:
+    * **Audio**: Generates AI voiceovers via **edge-tts**.
+    * **Video**: Performs "Stream-Slicing" using **yt-dlp** and **FFmpeg** to pull random 60s clips from long-form gameplay.
+    * **Assembly**: Crops to 9:16, overlays text, and renders the final MP4 using **MoviePy**.
+4.  **Load**: 
+    * Archives the master render to **Cloudflare R2** (S3-compatible storage).
+    * Publishes to **YouTube** via the Data API v3.
 
-[ ] Video Assembly (MoviePy)
+[Image of a data engineering pipeline architecture showing Reddit/YouTube sources, a Python processing core, and Supabase/R2/YouTube destinations]
 
-[ ] YouTube Upload (API)
+---
+
+## 🛠️ Tech Stack
+
+* **Language**: Python 3.12
+* **Database**: Supabase (PostgreSQL)
+* **Cloud Storage**: Cloudflare R2
+* **Video Engine**: MoviePy & FFmpeg
+* **Scraping**: PRAW (Python Reddit API Wrapper)
+* **Voice**: edge-tts (Microsoft Neural TTS)
+* **Infrastructure**: Linux (Ubuntu)
+
+---
+
+##
