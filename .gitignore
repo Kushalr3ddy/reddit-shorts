@@ -10,6 +10,7 @@ __pycache__/
 tbl_create.py
 test.txt
 temp/
+*client_secret*
 
 # Distribution / packaging
 .Python
