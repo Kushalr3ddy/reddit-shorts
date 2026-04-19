@@ -4,7 +4,7 @@ import logging
 from dotenv import load_dotenv
 
 # Import your modularized functions
-from reddit_shorts import processor
+from reddit_shorts import video_processor as processor
 from reddit_shorts import cloud_storage  # Assuming you moved R2 logic here
 # from reddit_bot import get_and_claim_reddit_post 
 

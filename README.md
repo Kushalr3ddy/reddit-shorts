@@ -2,7 +2,7 @@
 
 An automated data pipeline that extracts trending stories from Reddit, generates AI voiceovers, slices relevant gameplay footage from YouTube, and assembles high-retention vertical "Shorts" videos.
 
-## 🏗️ System Architecture
+## System Architecture
 
 The project follows a modular ETL (Extract, Transform, Load) pattern:
 
@@ -13,14 +13,13 @@ The project follows a modular ETL (Extract, Transform, Load) pattern:
     * **Video**: Performs "Stream-Slicing" using **yt-dlp** and **FFmpeg** to pull random 60s clips from long-form gameplay.
     * **Assembly**: Crops to 9:16, overlays text, and renders the final MP4 using **MoviePy**.
 4.  **Load**: 
-    * Archives the master render to **Cloudflare R2** (S3-compatible storage).
+    * Archives the master render to **Cloudflare R2** (use any S3-compatible storage).
     * Publishes to **YouTube** via the Data API v3.
 
-[Image of a data engineering pipeline architecture showing Reddit/YouTube sources, a Python processing core, and Supabase/R2/YouTube destinations]
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Language**: Python 3.12
 * **Database**: Supabase (PostgreSQL)
