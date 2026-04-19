@@ -1,0 +1,62 @@
+name: Reddit Shorts Daily Pipeline
+
+on:
+  schedule:
+    # Runs twice a day at 00:00 and 12:00 UTC
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # Allows you to trigger it manually from the Actions tab
+
+jobs:
+  process-video:
+    runs-on: ubuntu-latest
+    
+    # Ensure the job doesn't run longer than 15 minutes to save your free minutes
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core libmagic1
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore Configuration and Secrets
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          CLIENT_SECRETS: ${{ secrets.CLIENT_SECRETS }}
+          TOKEN_PICKLE_BASE64: ${{ secrets.TOKEN_PICKLE_BASE64 }}
+        run: |
+          # Recreate the .env file
+          echo "$ENV_FILE" > .env
+          
+          # Recreate the client_secrets.json for Google OAuth
+          echo "$CLIENT_SECRETS" > client_secrets.json
+          
+          # Decode the binary token.pickle from the Base64 secret
+          echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
+
+      - name: Execute Pipeline
+        run: python main.py
+
+      - name: Finalize Status
+        if: always()
+        run: |
+          echo "Pipeline execution finished with status: ${{ job.status }}"
+      
+      - name: Notify on Failure
+        if: failure() # This only runs if a previous step crashed
+        run: |
+          echo "The Reddit Shorts Pipeline failed!"
+          # You could add a curl command here to ping a Discord Webhook

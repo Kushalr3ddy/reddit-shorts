@@ -1,5 +1,7 @@
 # Reddit-to-YouTube Shorts Automated ETL Pipeline
 
+![Reddit Shorts Pipeline](https://github.com/kushalr3ddy/reddit-shorts/actions/workflows/pipeline.yml/badge.svg)
+
 An automated data pipeline that extracts trending stories from Reddit, generates AI voiceovers, slices relevant gameplay footage from YouTube, and assembles high-retention vertical "Shorts" videos.
 
 ## System Architecture
