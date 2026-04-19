@@ -30,5 +30,33 @@ The project follows a modular ETL (Extract, Transform, Load) pattern:
 * **Infrastructure**: Linux (Ubuntu)
 
 ---
+Environment Configuration
+Ensure .env contains the following keys exactly:
 
+client_id
+
+secret
+
+app_name
+
+supabase_project_id
+
+supabase_anon_key
+
+access_key_id
+
+secret_access_key
+
+bucket_endpoint
+
+bucket_name
+
+Deployment Steps
+Place client_secrets.json from the google console in the project root.
+
+Build the container: docker compose build.
+
+Run once interactively to complete YouTube OAuth: docker compose run reddit-bot.
+
+After token.pickle is generated, run in background: docker compose up -d.
 ##
