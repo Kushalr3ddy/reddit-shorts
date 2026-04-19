@@ -13,14 +13,19 @@ from googleapiclient.errors import HttpError
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, 'client_secrets.json')
+TOKEN_PICKLE_FILE = os.path.join(BASE_DIR, 'token.pickle')
+
 # Scopes required for uploading
 SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+CHUNK_SIZE = 5 * 1024 * 1024
 
 def get_authenticated_service():
-    """Authenticates the user and returns the YouTube service object."""
     creds = None
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
+    # Use the absolute path for token.pickle
+    if os.path.exists(TOKEN_PICKLE_FILE):
+        with open(TOKEN_PICKLE_FILE, 'rb') as token:
             creds = pickle.load(token)
             
     if not creds or not creds.valid:
@@ -29,9 +34,12 @@ def get_authenticated_service():
             creds.refresh(Request())
         else:
             logger.info("No valid token found. Opening browser for login...")
-            flow = InstalledAppFlow.from_client_secrets_file('client_secrets.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open('token.pickle', 'wb') as token:
+            # Use the absolute path for client_secrets.json
+            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+            # Use the exact port you whitelist in the console
+            creds = flow.run_local_server(port=8080, prompt='consent')
+        
+        with open(TOKEN_PICKLE_FILE, 'wb') as token:
             pickle.dump(creds, token)
 
     return build('youtube', 'v3', credentials=creds)
@@ -67,7 +75,8 @@ def resumable_upload(insert_request):
             logger.warning(error)
             retry += 1
             if retry > max_retries:
-                exit("Max retries exceeded.")
+                logger.error("Max retries exceeded. Skipping this upload.")
+                return None
             sleep_seconds = random.random() * (2 ** retry)
             logger.info(f"Sleeping {sleep_seconds:.2f}s before retry...")
             time.sleep(sleep_seconds)
@@ -94,7 +103,13 @@ def start_upload(file_path, title, description):
     }
 
     # Use chunksize=-1 for a single resumable session (simpler for most files)
-    media = MediaFileUpload(file_path, mimetype='video/mp4', chunksize=-1, resumable=True)
+    #media = MediaFileUpload(file_path, mimetype='video/mp4', chunksize=-1, resumable=True)
+    media = MediaFileUpload(
+    file_path, 
+    mimetype='video/mp4', 
+    chunksize=CHUNK_SIZE, 
+    resumable=True
+)
     
     request = youtube.videos().insert(
         part=','.join(body.keys()),

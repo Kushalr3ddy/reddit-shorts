@@ -11,6 +11,10 @@ tbl_create.py
 test.txt
 temp/
 *client_secret*
+*.mp3
+*.mp4
+shit/
+*.pickle
 
 # Distribution / packaging
 .Python
