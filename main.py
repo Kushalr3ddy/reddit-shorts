@@ -26,7 +26,7 @@ def sanitize_yt_title(title):
     return f"{clean[:75]} #shorts #reddit"
 
 def cleanup(post_id):
-    """Save disk space and RAM on X270."""
+    """Save disk space and RAM"""
     if not post_id: return
     logger.info(f"🧹 Cleaning temp assets for {post_id}")
     for filename in os.listdir(TEMP_DIR):

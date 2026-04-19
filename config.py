@@ -3,6 +3,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Check if we are running inside Docker
+IS_DOCKER = os.path.exists('/.dockerenv')
+
+if IS_DOCKER:
+    FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+else:
+    # Your local Ubuntu path
+    FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+
+
+
 # Hardware & Performance
 # Set to True only if you have VA-API (Intel/AMD) drivers configured on Ubuntu
 USE_GPU = os.getenv("USE_GPU", "False").lower() == "true"
@@ -24,3 +36,4 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 FONT_PATH = os.path.join(ASSETS_DIR, "fonts", "bold_font.ttf")
 # Point this to a local gameplay file or a specific source
 GAMEPLAY_SOURCE = os.getenv("GAMEPLAY_PATH", "assets/gameplay.mp4")
+

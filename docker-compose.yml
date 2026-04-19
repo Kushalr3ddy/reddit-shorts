@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  reddit-bot:
+    build: .
+    container_name: reddit_shorts_processor
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      # This mounts your local folder so token.pickle is saved/read 
+      # and your temp files are accessible if needed.
+    restart: always
+    
+    deploy:
+      resources:
+        limits:
+          memory: 2G
