@@ -1,0 +1,51 @@
+name: Reddit Shorts Daily Pipeline
+
+on:
+  workflow_dispatch: # Allows you to trigger it manually from the Actions tab
+
+jobs:
+  check-env-stuff:
+    runs-on: ubuntu-latest
+    
+    # Ensure the job doesn't run longer than 15 minutes to save your free minutes
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      -
+      - name: Restore Configuration and Secrets
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          CLIENT_SECRETS: ${{ secrets.CLIENT_SECRETS }}
+          TOKEN_PICKLE_BASE64: ${{ secrets.TOKEN_PICKLE_BASE64 }}
+        run: |
+          # Recreate the .env file
+          echo -e "$ENV_FILE" > .env
+          
+          # Recreate the client_secrets.json for Google OAuth
+          echo -e "$CLIENT_SECRETS" > client_secrets.json
+          
+          # Decode the binary token.pickle from the Base64 secret
+          echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
+
+          #echo the envs for debugging
+          echo "ENV_FILE content:"
+          cat .env
+          echo "client_secrets.json content:"
+          cat client_secrets.json
+          echo "token.pickle content (Base64):"
+          echo "$TOKEN_PICKLE_BASE64"
+
+      
+      - name: Finalize Status
+        if: always()
+        run: |
+          echo "Pipeline execution finished with status: ${{ job.status }}"
+      
+      - name: Notify on Failure
+        if: failure() # This only runs if a previous step crashed
+        run: |
+          echo "The Reddit Shorts Pipeline failed!"
+          # You could add a curl command here to ping a Discord Webhook
