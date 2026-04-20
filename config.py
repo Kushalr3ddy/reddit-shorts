@@ -19,7 +19,7 @@ else:
 # Set to True only if you have VA-API (Intel/AMD) drivers configured on Ubuntu
 USE_GPU = os.getenv("USE_GPU", "False").lower() == "true"
 VIDEO_ENCODER = "h264_vaapi" if USE_GPU else "libx264"
-THREADS = "4" # X270 has 4 threads
+THREADS = "4" 
 
 # Dimensions (Vertical 9:16)
 WIDTH = 1080
