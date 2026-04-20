@@ -32,28 +32,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Restore Configuration and Secrets
-        env:
-          ENV_FILE: ${{ secrets.ENV_FILE }}
-          CLIENT_SECRETS: ${{ secrets.CLIENT_SECRETS }}
-          TOKEN_PICKLE_BASE64: ${{ secrets.TOKEN_PICKLE_BASE64 }}
+      - name: Restore Secrets
         run: |
-          # Recreate the .env file
-          echo -e "$ENV_FILE" > .env
+          # Create .env safely
+          cat <<EOF > .env
+          ${{ secrets.ENV_FILE }}
+          EOF
           
-          # Recreate the client_secrets.json for Google OAuth
-          echo -e "$CLIENT_SECRETS" > client_secrets.json
-          
-          # Decode the binary token.pickle from the Base64 secret
-          echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
-
-          #echo the envs for debugging
-          echo "ENV_FILE content:"
-          cat .env
-          echo "client_secrets.json content:"
-          cat client_secrets.json
-          echo "token.pickle content (Base64):"
-          echo "$TOKEN_PICKLE_BASE64"
+          # Create JSON and Pickle
+          echo "${{ secrets.CLIENT_SECRETS }}" > client_secrets.json
+          echo "${{ secrets.TOKEN_PICKLE_BASE64 }}" | base64 -d > token.pickle
 
       - name: Execute Pipeline
         run: python main.py
