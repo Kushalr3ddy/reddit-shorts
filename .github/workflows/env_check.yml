@@ -6,7 +6,7 @@ on:
 jobs:
   check-env-stuff:
     runs-on: ubuntu-latest
-    
+    environment: reddit-shorts-pipeline
     # Ensure the job doesn't run longer than 15 minutes to save your free minutes
     timeout-minutes: 15
 
