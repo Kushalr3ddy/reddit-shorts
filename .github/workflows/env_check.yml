@@ -1,51 +1,40 @@
 name: Reddit Shorts Environment Check
 
 on:
-  workflow_dispatch: # Allows you to trigger it manually from the Actions tab
+  workflow_dispatch: # Allows you to trigger it manually
 
 jobs:
   check-env-stuff:
     runs-on: ubuntu-latest
     environment: reddit-shorts-pipeline
-    # Ensure the job doesn't run longer than 15 minutes to save your free minutes
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      -
       - name: Restore Configuration and Secrets
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
           CLIENT_SECRETS: ${{ secrets.CLIENT_SECRETS }}
           TOKEN_PICKLE_BASE64: ${{ secrets.TOKEN_PICKLE_BASE64 }}
         run: |
-          # Recreate the .env file
-          echo -e "$ENV_FILE" > .env
+          # Use printf to handle potential newlines in secrets safely
+          printf "%s" "$ENV_FILE" > .env
+          printf "%s" "$CLIENT_SECRETS" > client_secrets.json
           
-          # Recreate the client_secrets.json for Google OAuth
-          echo -e "$CLIENT_SECRETS" > client_secrets.json
-          
-          # Decode the binary token.pickle from the Base64 secret
-          echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
+          # Decode the binary token.pickle
+          if [ -n "$TOKEN_PICKLE_BASE64" ]; then
+            echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
+          fi
 
-          #echo the envs for debugging
-          echo "ENV_FILE content:"
-          cat .env
-          echo "client_secrets.json content:"
-          cat client_secrets.json
-          echo "token.pickle content (Base64):"
-          echo "$TOKEN_PICKLE_BASE64"
+          # Safe Debugging: Check if files exist and have size > 0
+          echo "--- Verification ---"
+          [ -s .env ] && echo "✅ .env file exists and is not empty" || echo "❌ .env is missing or empty"
+          [ -s client_secrets.json ] && echo "✅ client_secrets.json exists" || echo "❌ client_secrets.json missing"
+          [ -s token.pickle ] && echo "✅ token.pickle decoded successfully" || echo "❌ token.pickle missing"
 
-      
       - name: Finalize Status
         if: always()
         run: |
-          echo "Pipeline execution finished with status: ${{ job.status }}"
-      
-      - name: Notify on Failure
-        if: failure() # This only runs if a previous step crashed
-        run: |
-          echo "The Reddit Shorts Pipeline failed!"
-          # You could add a curl command here to ping a Discord Webhook
+          echo "Check finished with status: ${{ job.status }}"
