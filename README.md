@@ -34,7 +34,7 @@ The project follows a modular ETL (Extract, Transform, Load) pattern:
 ---
 Environment Configuration
 Ensure .env contains the following keys exactly:
-
+```
 client_id
 
 secret
@@ -52,7 +52,7 @@ secret_access_key
 bucket_endpoint
 
 bucket_name
-
+```
 Deployment Steps
 Place client_secrets.json from the google console in the project root.
 

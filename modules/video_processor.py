@@ -17,10 +17,13 @@ def get_random_gameplay_url():
         category = random.choice(list(data.keys()))
         playlist_url = data[category]
         
+        cookie_file = 'youtube_cookies.json'
+        
         # FIXED COMMAND:
         # --playlist-random: Tells yt-dlp to shuffle the list
         # --max-downloads 1: Tells it to stop after picking one
         # --get-id: Returns just the ID
+        
         cmd = [
             'yt-dlp', 
             '--quiet',
@@ -30,6 +33,10 @@ def get_random_gameplay_url():
             '--max-downloads', '1', 
             playlist_url
         ]
+        
+        # check if cookie file exists and add to command if it does
+        if os.path.exists(cookie_file):
+            cmd.extend(['--cookies', cookie_file])
         
         logger.info(f"Picking random video from {category} playlist...")
         video_id = subprocess.check_output(cmd).decode().strip()
@@ -55,7 +62,15 @@ def process_video_ffmpeg(audio_path, title, post_id, audio_duration):
         # Get the direct stream URL (720p or 1080p mp4)
         # This prevents downloading the whole file!
         logger.info(f"Fetching stream for: {youtube_url}")
+        cookie_file = 'youtube_cookies.json'
+
         cmd_url = ['yt-dlp', '-g', '-f', 'bestvideo[height<=1080][ext=mp4]', youtube_url]
+        
+        if os.path.exists(cookie_file):
+            logger.info("found YouTube cookies, adding to yt-dlp command")
+            cmd_url.extend(['--cookies', cookie_file])
+
+
         direct_url = subprocess.check_output(cmd_url).decode().strip()
 
         start_time = random.randint(120, 600) # Start deeper into the video

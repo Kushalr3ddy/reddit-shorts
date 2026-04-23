@@ -22,7 +22,7 @@ jobs:
           # Use printf to handle potential newlines in secrets safely
           printf "%s" "$ENV_FILE" > .env
           printf "%s" "$CLIENT_SECRETS" > client_secrets.json
-          
+          printf "%s" "$YT_COOKIES" > youtube_cookies.json
           # Decode the binary token.pickle
           if [ -n "$TOKEN_PICKLE_BASE64" ]; then
             echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
@@ -33,6 +33,7 @@ jobs:
           [ -s .env ] && echo "✅ .env file exists and is not empty" || echo "❌ .env is missing or empty"
           [ -s client_secrets.json ] && echo "✅ client_secrets.json exists" || echo "❌ client_secrets.json missing"
           [ -s token.pickle ] && echo "✅ token.pickle decoded successfully" || echo "❌ token.pickle missing"
+          [ -s youtube_cookies.json ] && echo "✅ youtube_cookies.json exists" || echo "❌ youtube_cookies.json missing"
 
       - name: Finalize Status
         if: always()
