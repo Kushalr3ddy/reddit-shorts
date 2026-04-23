@@ -3,7 +3,7 @@
 ![Reddit Shorts Pipeline](https://github.com/kushalr3ddy/reddit-shorts/actions/workflows/pipeline.yml/badge.svg)
 
 An automated data pipeline that extracts trending stories from Reddit, generates AI voiceovers, slices relevant gameplay footage from YouTube, and assembles high-retention vertical "Shorts" videos.
-
+### Note: if you are using hosting services to run this bot (like github actions, aws, etc) the bot detection mechanism will eventually block the script so use cookies, refer : https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies
 ## System Architecture
 
 The project follows a modular ETL (Extract, Transform, Load) pattern:
