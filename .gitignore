@@ -16,7 +16,7 @@ temp/
 shit/
 *.pickle
 youtube_cookies.json
-
+youtube_cookies.txt
 
 # Distribution / packaging
 .Python

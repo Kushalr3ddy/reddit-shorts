@@ -22,7 +22,7 @@ jobs:
           # Use printf to handle potential newlines in secrets safely
           printf "%s" "$ENV_FILE" > .env
           printf "%s" "$CLIENT_SECRETS" > client_secrets.json
-          printf "%s" "$YT_COOKIES" > youtube_cookies.json
+          printf "%s" "$YT_COOKIES" > youtube_cookies.txt
           # Decode the binary token.pickle
           if [ -n "$TOKEN_PICKLE_BASE64" ]; then
             echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle

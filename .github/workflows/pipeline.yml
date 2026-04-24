@@ -43,7 +43,7 @@ jobs:
           # Create JSON and Pickle
           echo "${{ secrets.CLIENT_SECRETS }}" > client_secrets.json
           echo "${{ secrets.TOKEN_PICKLE_BASE64 }}" | base64 -d > token.pickle
-          echo "${{ secrets.YT_COOKIES }}" > youtube_cookies.json
+          echo "${{ secrets.YT_COOKIES }}" > youtube_cookies.txt
 
       - name: Execute Pipeline
         run: python main.py

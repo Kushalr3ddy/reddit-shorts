@@ -17,7 +17,7 @@ def get_random_gameplay_url():
         category = random.choice(list(data.keys()))
         playlist_url = data[category]
         
-        cookie_file = 'youtube_cookies.json'
+        cookie_file = 'youtube_cookies.txt'
         
         # FIXED COMMAND:
         # --playlist-random: Tells yt-dlp to shuffle the list
@@ -62,7 +62,7 @@ def process_video_ffmpeg(audio_path, title, post_id, audio_duration):
         # Get the direct stream URL (720p or 1080p mp4)
         # This prevents downloading the whole file!
         logger.info(f"Fetching stream for: {youtube_url}")
-        cookie_file = 'youtube_cookies.json'
+        cookie_file = 'youtube_cookies.txt'
 
         cmd_url = ['yt-dlp', '-g', '-f', 'bestvideo[height<=1080][ext=mp4]', youtube_url]
         
