@@ -4,10 +4,8 @@ import os
 from dotenv import load_dotenv
 from config import TEMP_DIR
 
-# Load environment variables first
-load_dotenv()
 
-# Modular Imports
+# import modules
 from modules.reddit_ingest import get_top_posts_from_subreddits, claim_post
 from modules.audio_generator import generate_audio
 from modules.video_processor import process_video_ffmpeg
@@ -19,6 +17,11 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+#load .env stuff
+load_dotenv()
+logger.info("Environment variables loaded.")
+
 
 def sanitize_yt_title(title):
     """Clean and truncate title for YouTube API (Max 100 chars)."""
