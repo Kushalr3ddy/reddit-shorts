@@ -1,0 +1,18 @@
+# personal files/folder
+shit/
+
+# venv
+venv/
+.venv/
+
+# Byte-compiled files
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Exclude github actions from image
+.github/
+
+# Local temp artifacts
+temp/
+assets/
