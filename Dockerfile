@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     fonts-dejavu-core \
     libmagic1 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
