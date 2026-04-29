@@ -30,10 +30,10 @@ jobs:
 
           # Safe Debugging: Check if files exist and have size > 0
           echo "--- Verification ---"
-          [ -s .env ] && echo "✅ .env file exists and is not empty" || echo "❌ .env is missing or empty"
-          [ -s client_secrets.json ] && echo "✅ client_secrets.json exists" || echo "❌ client_secrets.json missing"
-          [ -s token.pickle ] && echo "✅ token.pickle decoded successfully" || echo "❌ token.pickle missing"
-          [ -s youtube_cookies.json ] && echo "✅ youtube_cookies.json exists" || echo "❌ youtube_cookies.json missing"
+          [ -s .env ] && echo " .env file exists and is not empty" || echo " .env is missing or empty"
+          [ -s client_secrets.json ] && echo " client_secrets.json exists" || echo " client_secrets.json missing"
+          [ -s token.pickle ] && echo " token.pickle decoded successfully" || echo " token.pickle missing"
+          [ -s youtube_cookies.json ] && echo " youtube_cookies.json exists" || echo " youtube_cookies.json missing"
 
       - name: Finalize Status
         if: always()

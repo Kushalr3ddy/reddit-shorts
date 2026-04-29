@@ -27,11 +27,11 @@ async def generate_audio(text, post_id):
         duration = audio_info.info.length
         
         if duration < 2:
-            logger.error(f"⚠️ Audio is suspiciously short: {duration}s")
+            logger.error(f"Audio is suspiciously short: {duration}s")
             
-        logger.info(f"🔊 Audio generated: {duration:.2f}s")
+        logger.info(f"Audio generated: {duration:.2f}s")
         return audio_path, duration
 
     except Exception as e:
-        logger.error(f"❌ TTS Failed: {e}")
+        logger.error(f"TTS Failed: {e}")
         return None, 0

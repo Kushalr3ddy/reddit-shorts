@@ -49,8 +49,8 @@ def archive_video(local_path, post_id, subreddit="unknown"):
             }
         )
         
-        logger.info(f"✅ Archived to R2: {r2_key}")
+        logger.info(f"Archived to R2: {r2_key}")
         return True
     except Exception as e:
-        logger.error(f"❌ R2 Archive failed: {e}")
+        logger.error(f"R2 Archive failed: {e}")
         return False

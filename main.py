@@ -28,7 +28,7 @@ def sanitize_yt_title(title):
 def cleanup(post_id):
     """Save disk space and RAM"""
     if not post_id: return
-    logger.info(f"🧹 Cleaning temp assets for {post_id}")
+    logger.info(f"Cleaning temp assets for {post_id}")
     for filename in os.listdir(TEMP_DIR):
         if filename.startswith(post_id):
             try:
@@ -37,12 +37,12 @@ def cleanup(post_id):
                 logger.warning(f"Cleanup error: {e}")
 
 async def run_pipeline():
-    logger.info("🤖 Starting Batch-Scan Pipeline...")
+    logger.info("Starting Batch-Scan Pipeline...")
 
     # 1. SCAN FOR STORIES
     candidates = get_top_posts_from_subreddits()
     if not candidates:
-        logger.info("😴 No suitable stories found. Adding more subs might help.")
+        logger.info("No suitable stories found. Adding more subs might help.")
         return
 
     # Sort to get the longest stories (within limits) first
@@ -56,11 +56,11 @@ async def run_pipeline():
             break
             
     if not post:
-        logger.error("❌ Could not claim any candidate in Supabase.")
+        logger.error(" Could not claim any candidate in Supabase.")
         return
 
     post_id = post['id']
-    logger.info(f"✅ Claimed: {post_id} (r/{post['subreddit']})")
+    logger.info(f"Claimed: {post_id} (r/{post['subreddit']})")
 
     try:
         # 3. VOICE GENERATION
@@ -93,12 +93,12 @@ async def run_pipeline():
         youtube_id = start_upload(final_video, yt_title, yt_desc)
 
         if youtube_id:
-            logger.info(f"✨ SUCCESS! Watch here: https://youtu.be/{youtube_id}")
+            logger.info(f"SUCCESS! Watch here: https://youtu.be/{youtube_id}")
         else:
-            logger.error("❌ YouTube upload failed.")
+            logger.error("YouTube upload failed.")
 
     except Exception as e:
-        logger.error(f"💥 Pipeline crashed: {e}")
+        logger.error(f"Pipeline crashed: {e}")
     
     finally:
         cleanup(post_id)
