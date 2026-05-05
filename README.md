@@ -62,3 +62,8 @@ Run once interactively to complete YouTube OAuth: docker compose run reddit-bot.
 
 After token.pickle is generated, run in background: docker compose up -d.
 ##
+---
+
+TODO: 
++ use raw postgres url to update db
++ store the youtube gameplay clips in bucket instead of fetching each time
