@@ -22,14 +22,25 @@ SUPABASE_URL = f"https://{os.getenv('supabase_project_id')}.supabase.co"
 SUPABASE_KEY = os.getenv("supabase_anon_key")
 SUPABASE = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def is_already_processed(reddit_id):
-    """Checks Supabase to see if this post has been handled."""
+def get_processed_ids(reddit_ids):
+    """batch-checks Supabase for which of the given ids have already been handled.
+
+    Returns a set of reddit_ids that already exist in the pipeline table, so the
+    caller can filter locally instead of querying once per submission.
+    """
+    if not reddit_ids:
+        return set()
     try:
-        res = SUPABASE.table("reddit_shorts_pipeline").select("reddit_id").eq("reddit_id", reddit_id).execute()
-        return len(res.data) > 0
+        res = (
+            SUPABASE.table("reddit_shorts_pipeline")
+            .select("reddit_id")
+            .in_("reddit_id", list(reddit_ids))
+            .execute()
+        )
+        return {row["reddit_id"] for row in res.data}
     except Exception as e:
-        logger.error(f"Supabase check failed: {e}")
-        return False
+        logger.error(f"Supabase batch check failed: {e}")
+        return set()
 
 def claim_post(post_data):
     """Inserts the post into Supabase to 'claim' it."""
@@ -49,16 +60,17 @@ def get_top_posts_from_subreddits():
     """Scans subreddits for valid 200-900 character stories."""
     subreddits = ["AmItheAsshole", "TwoSentenceHorror", "tifu", "AskReddit"]
     candidates = []
-    
+
+    # First pass: gather all valid submissions from Reddit (no DB calls in the loop).
     for sub_name in subreddits:
         logger.info(f"Scanning r/{sub_name}...")
         try:
             sub = reddit.subreddit(sub_name)
             for submission in sub.hot(limit=15):
-                # Skip if it's a pinned post or already processed
-                if submission.stickied or is_already_processed(submission.id):
+                # Skip pinned posts
+                if submission.stickied:
                     continue
-                
+
                 content = submission.selftext
                 if 200 <= len(content) <= 900:
                     candidates.append({
@@ -69,5 +81,10 @@ def get_top_posts_from_subreddits():
                     })
         except Exception as e:
             logger.error(f"Reddit error on r/{sub_name}: {e}")
-            
+
+    # Second pass: one batched Supabase query to drop already-processed posts.
+    processed = get_processed_ids([c['id'] for c in candidates])
+    if processed:
+        candidates = [c for c in candidates if c['id'] not in processed]
+
     return candidates

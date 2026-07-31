@@ -57,7 +57,7 @@ def resumable_upload(insert_request):
             status, response = insert_request.next_chunk()
             if response is not None:
                 if 'id' in response:
-                    logger.info(f"✅ Success! Video ID: {response['id']}")
+                    logger.info(f"Success! Video ID: {response['id']}")
                     return response['id']
                 else:
                     exit(f"Unexpected response: {response}")

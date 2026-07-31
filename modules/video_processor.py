@@ -106,7 +106,7 @@ def process_video_ffmpeg(audio_path, title, post_id, audio_duration):
         output_path
     ]
 
-        logger.info("🎬 FFmpeg is streaming and rendering simultaneously...")
+        logger.info("FFmpeg is streaming and rendering simultaneously...")
         subprocess.run(cmd, check=True, capture_output=True)
         return output_path
 
