@@ -2,7 +2,7 @@ import praw
 import logging
 import os
 from dotenv import load_dotenv
-from supabase import create_client
+import psycopg2
 
 # Load variables from .env
 load_dotenv()
@@ -16,44 +16,55 @@ reddit = praw.Reddit(
     user_agent=os.getenv("app_name", "yt-shorts-bot")
 )
 
-# Initializing Supabase
-# Your .env uses supabase_project_id and supabase_anon_key
-SUPABASE_URL = f"https://{os.getenv('supabase_project_id')}.supabase.co"
-SUPABASE_KEY = os.getenv("supabase_anon_key")
-SUPABASE = create_client(SUPABASE_URL, SUPABASE_KEY)
+# plain postgres now, ditched the supabase client cause it was just a wrapper around this anyway
+# .env has the direct connect bits: db_url (host), db_port, postgres_user, postgres_password
+# autocommit ON on purpose: each query is its own lil transaction, so a failed insert
+# (like a dupe claim) doesnt poison the connection and make every query after it shit itself
+CONN = psycopg2.connect(
+    host=os.getenv("db_url"),
+    port=os.getenv("db_port"),
+    user=os.getenv("postgres_user"),
+    password=os.getenv("postgres_password"),
+    dbname="postgres"
+)
+CONN.autocommit = True
 
 def get_processed_ids(reddit_ids):
-    """batch-checks Supabase for which of the given ids have already been handled.
+    """asks postgres ONCE which of these ids we already did, instead of hammering it per post.
 
-    Returns a set of reddit_ids that already exist in the pipeline table, so the
-    caller can filter locally instead of querying once per submission.
+    hands back a set of the reddit_ids that are already in the table, so the caller can
+    just filter locally. this is the whole optimisation, no more querying inside the loop
     """
     if not reddit_ids:
         return set()
     try:
-        res = (
-            SUPABASE.table("reddit_shorts_pipeline")
-            .select("reddit_id")
-            .in_("reddit_id", list(reddit_ids))
-            .execute()
-        )
-        return {row["reddit_id"] for row in res.data}
+        # ANY(%s) = dump the whole id list in as one postgres array, so its 1 query not 60
+        with CONN.cursor() as cur:
+            cur.execute(
+                "SELECT reddit_id FROM reddit_shorts_pipeline WHERE reddit_id = ANY(%s)",
+                (list(reddit_ids),)
+            )
+            return {row[0] for row in cur.fetchall()}
     except Exception as e:
-        logger.error(f"Supabase batch check failed: {e}")
+        logger.error(f"postgres batch check shat itself: {e}")
         return set()
 
 def claim_post(post_data):
-    """Inserts the post into Supabase to 'claim' it."""
+    """shoves the post into postgres to 'claim' it so no other run steals the same one."""
     try:
-        SUPABASE.table("reddit_shorts_pipeline").insert({
-            "reddit_id": post_data['id'],
-            "title": post_data['title'],
-            "status": "PROCESSING",
-            "subreddit": post_data['subreddit']
-        }).execute()
+        # if the reddit_id already exists this INSERT blows up (unique constraint) and we
+        # return False. thats not a bug, thats literally how the claiming works
+        with CONN.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO reddit_shorts_pipeline (reddit_id, title, status, subreddit)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (post_data['id'], post_data['title'], "PROCESSING", post_data['subreddit'])
+            )
         return True
     except Exception as e:
-        logger.error(f"Failed to claim post {post_data['id']}: {e}")
+        logger.error(f"couldnt claim post {post_data['id']}: {e}")
         return False
 
 def get_top_posts_from_subreddits():
@@ -61,13 +72,13 @@ def get_top_posts_from_subreddits():
     subreddits = ["AmItheAsshole", "TwoSentenceHorror", "tifu", "AskReddit"]
     candidates = []
 
-    # First pass: gather all valid submissions from Reddit (no DB calls in the loop).
+    # pass 1: grab all the decent submissions off reddit first. NO db calls in here, thats the point
     for sub_name in subreddits:
         logger.info(f"Scanning r/{sub_name}...")
         try:
             sub = reddit.subreddit(sub_name)
             for submission in sub.hot(limit=15):
-                # Skip pinned posts
+                # skip the pinned mod posts, theyre never actual stories
                 if submission.stickied:
                     continue
 
@@ -82,7 +93,7 @@ def get_top_posts_from_subreddits():
         except Exception as e:
             logger.error(f"Reddit error on r/{sub_name}: {e}")
 
-    # Second pass: one batched Supabase query to drop already-processed posts.
+    # pass 2: one single db hit to throw out the ones we already did
     processed = get_processed_ids([c['id'] for c in candidates])
     if processed:
         candidates = [c for c in candidates if c['id'] not in processed]

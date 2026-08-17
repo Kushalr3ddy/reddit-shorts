@@ -1,6 +1,14 @@
 # personal files/folder
 shit/
 
+# SECRETS - never bake these into the image (they get pulled at runtime via env_file instead)
+.env
+token.pickle
+client_secrets.json
+youtube_cookies.json
+youtube_cookies.txt
+*.pickle
+
 # venv
 venv/
 .venv/
