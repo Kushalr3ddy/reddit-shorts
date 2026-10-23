@@ -18,6 +18,7 @@ jobs:
           ENV_FILE: ${{ secrets.ENV_FILE }}
           CLIENT_SECRETS: ${{ secrets.CLIENT_SECRETS }}
           TOKEN_PICKLE_BASE64: ${{ secrets.TOKEN_PICKLE_BASE64 }}
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
         run: |
           # Use printf to handle potential newlines in secrets safely
           printf "%s" "$ENV_FILE" > .env
@@ -33,7 +34,7 @@ jobs:
           [ -s .env ] && echo " .env file exists and is not empty" || echo " .env is missing or empty"
           [ -s client_secrets.json ] && echo " client_secrets.json exists" || echo " client_secrets.json missing"
           [ -s token.pickle ] && echo " token.pickle decoded successfully" || echo " token.pickle missing"
-          [ -s youtube_cookies.json ] && echo " youtube_cookies.json exists" || echo " youtube_cookies.json missing"
+          [ -s youtube_cookies.txt ] && echo " youtube_cookies.txt exists" || echo " youtube_cookies.txt missing"
 
       - name: Finalize Status
         if: always()

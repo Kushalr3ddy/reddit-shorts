@@ -1,16 +1,13 @@
+"""Shared settings: paths, video dimensions, encoder choice. Imported by main.py and the modules."""
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Check if we are running inside Docker
-IS_DOCKER = os.path.exists('/.dockerenv')
 
-if IS_DOCKER:
-    FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-else:
-    # Your local Ubuntu path
-    FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+# DejaVu Bold is installed by the Dockerfile and the CI workflow (fonts-dejavu-core) and is
+# present on stock Ubuntu, so the same path works in Docker and locally. Override with FONT_PATH.
+FONT_PATH = os.getenv("FONT_PATH", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
 
 
 
@@ -31,9 +28,3 @@ TEMP_DIR = os.path.join(BASE_DIR, "temp")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 # Ensure these exist
 os.makedirs(TEMP_DIR, exist_ok=True)
-
-# Assets (Update these to your actual font/gameplay paths)
-FONT_PATH = os.path.join(ASSETS_DIR, "fonts", "bold_font.ttf")
-# Point this to a local gameplay file or a specific source
-GAMEPLAY_SOURCE = os.getenv("GAMEPLAY_PATH", "assets/gameplay.mp4")
-

@@ -9,7 +9,7 @@ An automated data pipeline that extracts trending stories from Reddit, generates
 The project follows a modular ETL (Extract, Transform, Load) pattern:
 
 1.  **Extract**: Scrapes top posts from targeted subreddits using **PRAW** (Reddit API).
-2.  **Verify**: Uses **Supabase (PostgreSQL)** to deduplicate posts and track processing status.
+2.  **Verify**: Uses a **SQLite db stored in the R2 bucket** (downloaded at start, re-uploaded after claim and at the end) to deduplicate posts and track status.
 3.  **Transform**:
     * **Audio**: Generates AI voiceovers via **edge-tts**.
     * **Video**: Performs "Stream-Slicing" using **yt-dlp** and **FFmpeg** to pull random 60s clips from long-form gameplay.
@@ -24,7 +24,7 @@ The project follows a modular ETL (Extract, Transform, Load) pattern:
 ## Tech Stack
 
 * **Language**: Python 3.12
-* **Database**: Supabase (PostgreSQL)
+* **State**: SQLite file synced to Cloudflare R2
 * **Cloud Storage**: Cloudflare R2
 * **Video Engine**: MoviePy & FFmpeg
 * **Scraping**: PRAW (Python Reddit API Wrapper)
@@ -40,10 +40,6 @@ client_id
 secret
 
 app_name
-
-supabase_project_id
-
-supabase_anon_key
 
 access_key_id
 
@@ -64,6 +60,7 @@ After token.pickle is generated, run in background: docker compose up -d.
 ##
 ---
 
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a walkthrough of the code.
+
 TODO: 
-+ use raw postgres url to update db
 + store the youtube gameplay clips in bucket instead of fetching each time

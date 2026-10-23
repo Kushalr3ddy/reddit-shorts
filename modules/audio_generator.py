@@ -1,3 +1,4 @@
+"""Step 3: text-to-speech with edge-tts (free Microsoft neural voices, no API key)."""
 import edge_tts
 import logging
 import asyncio
@@ -6,6 +7,10 @@ from mutagen.mp3 import MP3
 logger = logging.getLogger(__name__)
 
 async def generate_audio(text, post_id):
+    """Turn text into temp/<post_id>.mp3. Returns (path, duration_seconds) or (None, 0) on failure.
+
+    Note: path is relative, so this only works when run from the project root (main.py does).
+    """
     audio_path = f"temp/{post_id}.mp3"
     
     # 1. Clean the text (Remove weird characters that break TTS)
@@ -14,7 +19,7 @@ async def generate_audio(text, post_id):
 
     try:
         # 2. Generate the stream
-        communicate = edge_tts.Communicate(clean_text, "en-US-ChristopherNeural")
+        communicate = edge_tts.Communicate(clean_text, "en-US-ChristopherNeural")  # voice name; change here to swap voice
         
         # 3. Ensure the file is FULLY saved before moving on
         await communicate.save(audio_path)
@@ -27,7 +32,7 @@ async def generate_audio(text, post_id):
         duration = audio_info.info.length
         
         if duration < 2:
-            logger.error(f"Audio is suspiciously short: {duration}s")
+            logger.error(f"Audio is suspiciously short: {duration}s")  # only logs, does not abort
             
         logger.info(f"Audio generated: {duration:.2f}s")
         return audio_path, duration

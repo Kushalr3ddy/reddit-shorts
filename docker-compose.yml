@@ -10,7 +10,8 @@ services:
       - .:/app
       # This mounts your local folder so token.pickle is saved/read 
       # and your temp files are accessible if needed.
-    restart: always
+    # one-shot job: run once and exit. schedule it with cron or the GitHub workflow
+    restart: "no"
     
     deploy:
       resources:

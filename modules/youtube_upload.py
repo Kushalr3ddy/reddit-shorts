@@ -1,3 +1,9 @@
+"""Step 5b: upload the finished video to YouTube (Data API v3, OAuth installed-app flow).
+
+First run needs a browser login (port 8080) which writes token.pickle; after that the token is
+refreshed automatically. In CI the pickle is restored from the TOKEN_PICKLE_BASE64 secret.
+Uploads go up as PRIVATE, flip privacyStatus below (or in Studio) to publish.
+"""
 import os
 import pickle
 import logging
@@ -22,6 +28,7 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
 CHUNK_SIZE = 5 * 1024 * 1024
 
 def get_authenticated_service():
+    """Return an authorised YouTube API client, refreshing or (interactively) creating the token."""
     creds = None
     # Use the absolute path for token.pickle
     if os.path.exists(TOKEN_PICKLE_FILE):
@@ -60,7 +67,8 @@ def resumable_upload(insert_request):
                     logger.info(f"Success! Video ID: {response['id']}")
                     return response['id']
                 else:
-                    exit(f"Unexpected response: {response}")
+                    logger.error(f"Unexpected response: {response}")
+                    return None
             if status:
                 logger.info(f"Progress: {int(status.progress() * 100)}%")
         except HttpError as e:
@@ -82,7 +90,7 @@ def resumable_upload(insert_request):
             time.sleep(sleep_seconds)
 
 def start_upload(file_path, title, description):
-    """Initializes the upload request."""
+    """Initializes the upload request. Returns the YouTube video id, or None on failure."""
     if not os.path.exists(file_path):
         logger.error(f"File not found: {file_path}")
         return
