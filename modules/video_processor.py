@@ -96,20 +96,31 @@ def process_video_ffmpeg(audio_path, title, post_id, audio_duration):
     if not youtube_url:
         return None
 
+    gameplay_path = f"temp/{post_id}_gameplay.mp4"
     try:
-        # Get the direct stream URL (720p or 1080p mp4)
-        # This prevents downloading the whole file!
-        logger.info(f"Fetching stream for: {youtube_url}")
+        # grab the WHOLE gameplay clip to disk first, THEN render off the local file.
+        # streaming the url straight into ffmpeg kept dying with 403s (youtube ties the
+        # stream url to whatever client ripped it), a native download lets yt-dlp handle
+        # all that itself. costs disk + a wait but its way more reliable than streaming
+        logger.info(f"downloading gameplay: {youtube_url}")
         cookie_file = 'youtube_cookies.txt'
 
-        cmd_url = [YT_DLP, '-g', '-f', 'bestvideo[height<=1080][ext=mp4]', *JS_RUNTIME_ARGS, youtube_url]
+        dl_cmd = [
+            YT_DLP,
+            '-f', 'bestvideo[height<=1080][ext=mp4]/best[ext=mp4]/best',
+            *JS_RUNTIME_ARGS,
+            '-o', gameplay_path,
+            youtube_url
+        ]
 
         if os.path.exists(cookie_file):
             logger.info("found YouTube cookies, adding to yt-dlp command")
-            cmd_url.extend(['--cookies', cookie_file])
+            dl_cmd.extend(['--cookies', cookie_file])
 
-
-        direct_url = subprocess.check_output(cmd_url).decode().strip()
+        subprocess.run(dl_cmd, check=True, capture_output=True)
+        if not os.path.exists(gameplay_path):
+            logger.error("yt-dlp finished but theres no gameplay file on disk, bailing")
+            return None
 
         start_time = random.randint(120, 600) # Start deeper into the video (skip intros)
         # (an earlier safe_title was computed here without wrapping; it was immediately
@@ -136,7 +147,7 @@ def process_video_ffmpeg(audio_path, title, post_id, audio_duration):
         'ffmpeg', '-y',
         '-ss', str(start_time),
         '-t', str(audio_duration + 1), # Input buffer
-        '-i', direct_url,
+        '-i', gameplay_path,
         '-i', audio_path,
         '-filter_complex', filter_complex,
         '-map', '[v_out]',
@@ -147,15 +158,22 @@ def process_video_ffmpeg(audio_path, title, post_id, audio_duration):
         output_path
     ]
 
-        logger.info("FFmpeg is streaming and rendering simultaneously...")
+        logger.info("rendering off the downloaded gameplay file...")
         subprocess.run(cmd, check=True, capture_output=True)
         return output_path
 
     except subprocess.CalledProcessError as e:
-        # capture_output hides ffmpeg's stderr inside the exception, so dig it out and actually log WHY it died
+        # capture_output hides ffmpeg/yt-dlp stderr inside the exception, so dig it out and log WHY it died
         err = e.stderr.decode()[-500:] if e.stderr else str(e)
-        logger.error(f"FFmpeg/yt-dlp Stream Error: {err}")
+        logger.error(f"FFmpeg/yt-dlp error: {err}")
         return None
     except Exception as e:
-        logger.error(f"FFmpeg/yt-dlp Stream Error: {e}")
+        logger.error(f"FFmpeg/yt-dlp error: {e}")
         return None
+    finally:
+        # ditch the big gameplay download either way, no point sitting on 100s of MB
+        if os.path.exists(gameplay_path):
+            try:
+                os.remove(gameplay_path)
+            except OSError:
+                pass
